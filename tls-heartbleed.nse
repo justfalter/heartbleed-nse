@@ -33,13 +33,20 @@ portrule = shortport.ssl
 
 action = function(host, port)
   local sock, status, response, err, cli_h
+  stdnse.print_debug(nsedebug.tostr(tls.CIPHERS))
+
+  local ssl_protocol_ver = "TLSv1.0"
+
+  -- Enumerate through all the ciphers that we 'know' about, just to increase
+  -- our chances of successfully completing a handshake.
+  local ciphers = {}
+  for k, v in pairs(tls.CIPHERS) do
+    ciphers[#ciphers+1] = k
+  end
 
   cli_h = tls.client_hello({
-    ["protocol"] = "TLSv1.2",
-    ["ciphers"] = {
-      "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
-      "TLS_RSA_WITH_RC4_128_MD5",
-    },
+    ["protocol"] = ssl_protocol_ver,
+    ["ciphers"] = ciphers,
     ["compressors"] = {"NULL"},
     ["extensions"] = {
       ["heartbeat"] = "\x01", -- peer_not_allowed_to_send
@@ -108,7 +115,7 @@ action = function(host, port)
   end
 
   local numbytes = 0xFFFF
-  local hb = tls.record_write("heartbeat", "TLSv1.2", bin.pack("C>S",
+  local hb = tls.record_write("heartbeat", ssl_protocol_ver, bin.pack("C>S",
       1, -- heartbeat_request
       numbytes
       )
